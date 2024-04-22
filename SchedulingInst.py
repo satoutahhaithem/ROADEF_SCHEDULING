@@ -269,11 +269,11 @@ if (data_set_choice=="2024"):
 
 # constraints.to_file("instance/"+data_set_choice+"/"+str(max_parallel_sessions)+"_session_file.wcnf")
 if (isWithZ==0 and encType==0):
-    constraints.to_file("./Benchmark/BasicModel/ZROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions))
+    constraints.to_file("./Benchmark/BasicModel/ROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions))
 elif (isWithZ!=0 and encType==0):
-    constraints.to_file("./Benchmark/EnhancedModel/ZROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions))
+    constraints.to_file("./Benchmark/EnhancedModel/ROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions))
 else:
-    constraints.to_file("./Benchmark/EnhancedModelEnc/ZROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions))
+    constraints.to_file("./Benchmark/EnhancedModelEnc/ROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions))
 
 
 
@@ -294,13 +294,7 @@ def display_assignments_by_slot_with_counts(model, slots, papers_range, conferen
         
 
 
-# print(constraints)
-# with RC2(constraints, solver="Cadical153") as solver:
-#     for model in solver.enumerate():
-#         print ("enter solver")
-#         print('Model has cost:', solver.cost)
-#         # print('Model:', solver.model)
-
+# To solve the model and display the assignement decomment this part of code 
 # with RC2(constraints, solver="Cadical153") as solver:
 #     for model in solver.enumerate():
 #         print('Model has cost:', solver.cost)
@@ -309,29 +303,5 @@ def display_assignments_by_slot_with_counts(model, slots, papers_range, conferen
 # #         display_assignments_by_slot_with_counts(model, slots, papers_range, conference_sessions)
 # #         break  
 
-def convert_cnf_format(old_file_path, new_file_path):
-    with open(old_file_path, 'r') as old_file, open(new_file_path, 'w') as new_file:
-        for line in old_file:
-            # Check if the line starts with 'p wcnf'
-            if line.startswith('p wcnf'):
-                # Remove 'p wcnf' from the line and prepend 'h'
-                new_line = 'h ' + line.split(' ', 2)[2]
-                new_file.write(new_line)
-            else:
-                # Write the line to the new file as is
-                new_file.write(line)
 
-# Specify the old and new file paths
-if (isWithZ==0 and encType==0):
-    old_file_path = "./Benchmark/BasicModel/ZROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions)
-    new_file_path = "./Benchmark/BasicModel/ROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions)
-elif (isWithZ!=0 and encType==0):
-    old_file_path = "./Benchmark/EnhancedModel/ZROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions)
-    new_file_path = "./Benchmark/EnhancedModel/ROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions)
-else:
-    old_file_path = "./Benchmark/EnhancedModelEnc/ZROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions)
-    new_file_path = "./Benchmark/EnhancedModelEnc/ROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions)
-
-# Call the function to convert the file format
-convert_cnf_format(old_file_path, new_file_path)
 
