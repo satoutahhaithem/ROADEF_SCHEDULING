@@ -7,28 +7,33 @@ from pysat.examples.rc2 import RC2
 from pysat.formula import WCNF
 import sys
 
+# This code require at least two argument when running the command 
 if len(sys.argv) < 3:
     print("You must specify the year and maxparrallel session as a parameter (e.g., python3 Scheduling_Problem.py 2024 11)")
     sys.exit(1)
 
+# recover the first argument
 data_set_choice = sys.argv[1]
 
-max_parallel_sessions = int(sys.argv[2]) if len(sys.argv) > 2 else 10  # Default value can be adjusted
+# recover the second parameter 
+max_parallel_sessions = int(sys.argv[2]) 
 
+# The third parameter is to say if you want to use it with or without z variable
+# Default to 1, adjust as needed
 isWithZ = int(sys.argv[3]) if len(sys.argv) > 3 else 1
 
-encType = int(sys.argv[4]) if len(sys.argv) > 4 else 1  # Default to 1, adjust as needed
+# The fourth parameter is to change the encoding to cardNetwork for cardianality and best for PBEnc 
+# Default to 1, adjust as needed
+encType = int(sys.argv[4]) if len(sys.argv) > 4 else 1 
 
 if isWithZ != 1:
-    print("You chose to use variable z. To use without the z variable please enter 0 as the third parameter.")
+    print("You chose to use without variable z. To use with the z variable please enter 0 as the third parameter.")
 
 if encType != 1:
-    print("You chose to use Card Best. To use sort network please enter 0 as the fourth parameter.")
+    print("You chose to use Card Best Encoding. To use sort network please enter 0 as the fourth parameter.")
 
-if len(sys.argv) > 1:
-    data_set_choice = sys.argv[1]
 
-# Choose data set based on the argument
+# Choose data set based on the argument (Year selected)
 if data_set_choice == "2024":
     if (max_parallel_sessions < 9 ): 
         print ("max_parallel_sessions must more than 9")
@@ -210,45 +215,56 @@ if (isWithZ!=0):
             
 
 
-if (isWithZ!=0):
-    # Soft Constraints to Minimize Working-Group Conflicts
-    # Iterate over all possible pairs of sessions (s1, s2), ensuring s1 is less than s2 to avoid duplicates
-    for s1 in range(1, conference_sessions + 1):
 
-        for s2 in range(s1 + 1, conference_sessions + 1):  # Ensure s1 < s2
-            # Identify common working groups between the two sessions     
-            common_groups = set(session_groups[s1 - 1]).intersection(session_groups[s2 - 1])
+# Soft Constraints to Minimize Working-Group Conflicts
+# Iterate over all possible pairs of sessions (s1, s2), ensuring s1 is less than s2 to avoid duplicates
+for s1 in range(1, conference_sessions + 1):
 
-            # For each slot, check if the common groups between these two sessions lead to a conflict
-            for c in range(1, slots + 1):
-                for g in common_groups:
-                    # Create a new variable for each potential conflict (increment y_var)
-                    y_var = y_var + 1
-                    # Add a soft constraint for this potential conflict with a weight of 1.
-                    # This means the solver will try to avoid this situation but can still accept it at a cost
-                    constraints.append([-y_var], weight=1)  
-                    # Hard Constraint : Add a constraint to indicate a conflict if both sessions s1 and s2 are scheduled in the same slot c. 
+    for s2 in range(s1 + 1, conference_sessions + 1):  # Ensure s1 < s2
+        # Identify common working groups between the two sessions     
+        common_groups = set(session_groups[s1 - 1]).intersection(session_groups[s2 - 1])
+
+        # For each slot, check if the common groups between these two sessions lead to a conflict
+        for c in range(1, slots + 1):
+            for g in common_groups:
+                # Create a new variable for each potential conflict (increment y_var)
+                y_var = y_var + 1
+
+                # Add a soft constraint for this potential conflict with a weight of 1.
+                # This means the solver will try to avoid this situation but can still accept it at a cost
+                constraints.append([-y_var], weight=1)  
+                if (isWithZ!=0):
+                # Hard Constraint : Add a constraint to indicate a conflict if both sessions s1 and s2 are scheduled in the same slot c. 
                     constraints.append([var_z(s1,c),var_z(s2,c),y_var])
+                else:
+                    for l1 in range(1,length_of_paper_range+1):
+                            for l2 in range(1,length_of_paper_range+1):
+                                # Create a new variable for each potential conflict (increment y_var)
+                                # Add a soft constraint for this potential conflict with a weight of 1.
+                                # This means the solver will try to avoid this situation but can still accept it at a cost
+                                # Hard Constraint : Add a constraint to indicate a conflict if both sessions s1 and s2 are scheduled in the same slot c. 
+                                constraints.append([-var_x(s1,c,l1),-var_x(s2,c,l2),y_var])
 
-else:    
-    for s1 in range(1, conference_sessions + 1):
 
-        for s2 in range(s1 + 1, conference_sessions + 1):  # Ensure s1 < s2
-            # Identify common working groups between the two sessions     
-            common_groups = set(session_groups[s1 - 1]).intersection(session_groups[s2 - 1])
 
-            # For each slot, check if the common groups between these two sessions lead to a conflict
-            for c in range(1, slots + 1): 
-                    for g in common_groups:
-                            y_var = y_var + 1
-                            constraints.append([-y_var], weight=1) 
-                            for l1 in range(1,length_of_paper_range+1):
-                                for l2 in range(1,length_of_paper_range+1):
-                                    # Create a new variable for each potential conflict (increment y_var)
-                                    # Add a soft constraint for this potential conflict with a weight of 1.
-                                    # This means the solver will try to avoid this situation but can still accept it at a cost
-                                    # Hard Constraint : Add a constraint to indicate a conflict if both sessions s1 and s2 are scheduled in the same slot c. 
-                                    constraints.append([-var_x(s1,c,l1),-var_x(s2,c,l2),y_var])
+# for s1 in range(1, conference_sessions + 1):
+
+#     for s2 in range(s1 + 1, conference_sessions + 1):  # Ensure s1 < s2
+#         # Identify common working groups between the two sessions     
+#         common_groups = set(session_groups[s1 - 1]).intersection(session_groups[s2 - 1])
+
+#         # For each slot, check if the common groups between these two sessions lead to a conflict
+#         for c in range(1, slots + 1): 
+#                 for g in common_groups:
+#                         y_var = y_var + 1
+#                         constraints.append([-y_var], weight=1) 
+#                         for l1 in range(1,length_of_paper_range+1):
+#                             for l2 in range(1,length_of_paper_range+1):
+#                                 # Create a new variable for each potential conflict (increment y_var)
+#                                 # Add a soft constraint for this potential conflict with a weight of 1.
+#                                 # This means the solver will try to avoid this situation but can still accept it at a cost
+#                                 # Hard Constraint : Add a constraint to indicate a conflict if both sessions s1 and s2 are scheduled in the same slot c. 
+#                                 constraints.append([-var_x(s1,c,l1),-var_x(s2,c,l2),y_var])
     ####################################################################################
 
 
