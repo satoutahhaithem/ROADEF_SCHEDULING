@@ -7,16 +7,24 @@ from pysat.examples.rc2 import RC2
 from pysat.formula import WCNF
 import sys
 
-
-
 if len(sys.argv) < 3:
-    print("You must write the year roadef as a second parameter and maxparrallel session as third parameter 'for exemple python3 Scheduling_Problem.py 2024 11'")
-    sys.exit(1)  # Exit the script with an error code
+    print("You must specify the year and maxparrallel session as a parameter (e.g., python3 Scheduling_Problem.py 2024 11)")
+    sys.exit(1)
 
-# Extract the year of roadef from the command-line arguments
 data_set_choice = sys.argv[1]
-max_parallel_sessions = int(sys.argv[2])
-# Check if a command line argument is provided
+
+max_parallel_sessions = int(sys.argv[2]) if len(sys.argv) > 2 else 10  # Default value can be adjusted
+
+isWithZ = int(sys.argv[3]) if len(sys.argv) > 3 else 1
+
+encType = int(sys.argv[4]) if len(sys.argv) > 4 else 1  # Default to 1, adjust as needed
+
+if isWithZ != 1:
+    print("You chose to use variable z. To use without the z variable please enter 0 as the third parameter.")
+
+if encType != 1:
+    print("You chose to use Card Best. To use sort network please enter 0 as the fourth parameter.")
+
 if len(sys.argv) > 1:
     data_set_choice = sys.argv[1]
 
@@ -54,7 +62,11 @@ else:
 
 
 length_of_paper_range = len(papers_range)
-globalEncType = EncType.sortnetwrk
+if (encType!=0):
+    globalEncType = EncType.cardnetwrk
+else:
+    globalEncType = EncType.sortnetwrk
+
 
 
 
@@ -89,9 +101,13 @@ def var_z(s, c):
     return max_var_x + (s - 1) * slots + c
 
 # Define the last variable 
-max_var_z = var_z(conference_sessions, slots)   
+if (isWithZ!=0):
+    max_var_z = var_z(conference_sessions, slots)  
+    y_var = max_var_z
+else:
+    max_var_x = var_x(conference_sessions, slots, length_of_paper_range)
+    y_var = max_var_x
 
-y_var = max_var_z  
 
 
 
@@ -118,7 +134,10 @@ for s in range(1, conference_sessions +1):
         for l in range(1,length_of_paper_range+1):
             aux_vars.append(var_x(s, c, l))
             aux_weight.append(papers_range[l-1])
-    eq_clause = PBEnc.equals(lits=aux_vars, weights=aux_weight,bound=np[s-1], top_id=y_var, encoding=pbenc.sortnetwrk)
+    if (encType!=0):
+        eq_clause = PBEnc.equals(lits=aux_vars, weights=aux_weight,bound=np[s-1], top_id=y_var, encoding=pbenc.best)
+    else:
+        eq_clause = PBEnc.equals(lits=aux_vars, weights=aux_weight,bound=np[s-1], top_id=y_var, encoding=pbenc.sortnetwrk)
     y_var=eq_clause.nv
     constraints.extend(eq_clause.clauses)
 ####################################################################################
@@ -140,31 +159,41 @@ for s in range(1, conference_sessions + 1):
 
 
 # Fourth Constraint: Number of parallel sessions is not exceeded for each slot
-for c in range(1, slots + 1):
-    neg_z_vars = []
-    for s in range(1, conference_sessions + 1):
-        neg_z_vars.append(-var_z(s, c))
-    atmost_clause = CardEnc.atmost(lits=neg_z_vars, bound=max_parallel_sessions, top_id=y_var, encoding=globalEncType)
-    y_var=atmost_clause.nv
-    constraints.extend(atmost_clause.clauses)
-####################################################################################
-
-
-
-
-# Implementing the equivalence transformation for session-slot (z variable)
-for s in range(1, conference_sessions + 1):
+if (isWithZ!=0):
     for c in range(1, slots + 1):
-        z_var = var_z(s, c)
-        x_vars=[]
-        for l in range(1,length_of_paper_range+1):
-            x_vars.append(var_x(s, c, l))
-        or_clause = x_vars + [z_var]
-        constraints.append(or_clause)
-
-        for x in x_vars:
-            constraints.append([-z_var, -x])
+        neg_z_vars = []
+        for s in range(1, conference_sessions + 1):
+            neg_z_vars.append(-var_z(s, c))
+        atmost_clause = CardEnc.atmost(lits=neg_z_vars, bound=max_parallel_sessions, top_id=y_var, encoding=globalEncType)
+        y_var=atmost_clause.nv
+        constraints.extend(atmost_clause.clauses)
+else:
+    for c in range(1, slots + 1):
+        x_vars = []
+        for s in range(1, conference_sessions + 1):
+            for l in range(1,length_of_paper_range+1):
+                x_vars.append(var_x(s,c,l))
+        atmost_clause = CardEnc.atmost(lits=x_vars, bound=max_parallel_sessions, top_id=y_var, encoding=globalEncType)
+        y_var=atmost_clause.nv
+        constraints.extend(atmost_clause.clauses)
 ####################################################################################
+
+
+
+if (isWithZ!=0):
+    # Implementing the equivalence transformation for session-slot (z variable)
+    for s in range(1, conference_sessions + 1):
+        for c in range(1, slots + 1):
+            z_var = var_z(s, c)
+            x_vars=[]
+            for l in range(1,length_of_paper_range+1):
+                x_vars.append(var_x(s, c, l))
+            or_clause = x_vars + [z_var]
+            constraints.append(or_clause)
+
+            for x in x_vars:
+                constraints.append([-z_var, -x])
+    ####################################################################################
 
 
 
@@ -181,28 +210,46 @@ for s in range(1, conference_sessions + 1):
             
 
 
+if (isWithZ!=0):
+    # Soft Constraints to Minimize Working-Group Conflicts
+    # Iterate over all possible pairs of sessions (s1, s2), ensuring s1 is less than s2 to avoid duplicates
+    for s1 in range(1, conference_sessions + 1):
 
+        for s2 in range(s1 + 1, conference_sessions + 1):  # Ensure s1 < s2
+            # Identify common working groups between the two sessions     
+            common_groups = set(session_groups[s1 - 1]).intersection(session_groups[s2 - 1])
 
-# Soft Constraints to Minimize Working-Group Conflicts
+            # For each slot, check if the common groups between these two sessions lead to a conflict
+            for c in range(1, slots + 1):
+                for g in common_groups:
+                    # Create a new variable for each potential conflict (increment y_var)
+                    y_var = y_var + 1
+                    # Add a soft constraint for this potential conflict with a weight of 1.
+                    # This means the solver will try to avoid this situation but can still accept it at a cost
+                    constraints.append([-y_var], weight=1)  
+                    # Hard Constraint : Add a constraint to indicate a conflict if both sessions s1 and s2 are scheduled in the same slot c. 
+                    constraints.append([var_z(s1,c),var_z(s2,c),y_var])
 
-# Iterate over all possible pairs of sessions (s1, s2), ensuring s1 is less than s2 to avoid duplicates
-for s1 in range(1, conference_sessions + 1):
+else:    
+    for s1 in range(1, conference_sessions + 1):
 
-    for s2 in range(s1 + 1, conference_sessions + 1):  # Ensure s1 < s2
-        # Identify common working groups between the two sessions     
-        common_groups = set(session_groups[s1 - 1]).intersection(session_groups[s2 - 1])
+        for s2 in range(s1 + 1, conference_sessions + 1):  # Ensure s1 < s2
+            # Identify common working groups between the two sessions     
+            common_groups = set(session_groups[s1 - 1]).intersection(session_groups[s2 - 1])
 
-        # For each slot, check if the common groups between these two sessions lead to a conflict
-        for c in range(1, slots + 1):
-            for g in common_groups:
-                # Create a new variable for each potential conflict (increment y_var)
-                y_var = y_var + 1
-                # Add a soft constraint for this potential conflict with a weight of 1.
-                # This means the solver will try to avoid this situation but can still accept it at a cost
-                constraints.append([-y_var], weight=1)  
-                # Hard Constraint : Add a constraint to indicate a conflict if both sessions s1 and s2 are scheduled in the same slot c. 
-                constraints.append([var_z(s1,c),var_z(s2,c),y_var])
-####################################################################################
+            # For each slot, check if the common groups between these two sessions lead to a conflict
+            for c in range(1, slots + 1): 
+                    for g in common_groups:
+                            y_var = y_var + 1
+                            constraints.append([-y_var], weight=1) 
+                            for l1 in range(1,length_of_paper_range+1):
+                                for l2 in range(1,length_of_paper_range+1):
+                                    # Create a new variable for each potential conflict (increment y_var)
+                                    # Add a soft constraint for this potential conflict with a weight of 1.
+                                    # This means the solver will try to avoid this situation but can still accept it at a cost
+                                    # Hard Constraint : Add a constraint to indicate a conflict if both sessions s1 and s2 are scheduled in the same slot c. 
+                                    constraints.append([-var_x(s1,c,l1),-var_x(s2,c,l2),y_var])
+    ####################################################################################
 
 
 
@@ -210,12 +257,25 @@ for s1 in range(1, conference_sessions + 1):
 # This constraint ensures that session 34 is assigned only to slots 5, 6, or 7.
 if (data_set_choice=="2024"):
     print((data_set_choice=="2024"))
-    for i in range (1,5):
-        constraints.append([var_z(34,i)])
+    if (isWithZ!=0):
+        for i in range (1,5):
+            constraints.append([var_z(34,i)])  
+    else:
+        for i in range (1,5):
+            for l in range(1,length_of_paper_range+1):
+                constraints.append([-var_x(34,i,l)])         
+
 # ####################################################################################
 
 # constraints.to_file("instance/"+data_set_choice+"/"+str(max_parallel_sessions)+"_session_file.wcnf")
-constraints.to_file("./Benchmark/EnhancedModel/ZROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions))
+if (isWithZ==0 and encType==0):
+    constraints.to_file("./Benchmark/BasicModel/ZROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions))
+elif (isWithZ!=0 and encType==0):
+    constraints.to_file("./Benchmark/EnhancedModel/ZROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions))
+else:
+    constraints.to_file("./Benchmark/EnhancedModelEnc/ZROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions))
+
+
 
 
 
@@ -262,8 +322,15 @@ def convert_cnf_format(old_file_path, new_file_path):
                 new_file.write(line)
 
 # Specify the old and new file paths
-old_file_path = "./Benchmark/EnhancedModel/ZROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions)
-new_file_path = "./Benchmark/EnhancedModel/ROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions)
+if (isWithZ==0 and encType==0):
+    old_file_path = "./Benchmark/BasicModel/ZROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions)
+    new_file_path = "./Benchmark/BasicModel/ROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions)
+elif (isWithZ!=0 and encType==0):
+    old_file_path = "./Benchmark/EnhancedModel/ZROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions)
+    new_file_path = "./Benchmark/EnhancedModel/ROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions)
+else:
+    old_file_path = "./Benchmark/EnhancedModelEnc/ZROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions)
+    new_file_path = "./Benchmark/EnhancedModelEnc/ROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions)
 
 # Call the function to convert the file format
 convert_cnf_format(old_file_path, new_file_path)
