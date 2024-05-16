@@ -27,6 +27,6 @@ for yearRodef in {2024..2021}; do
 
     # Iterate over the selected array
     for max_par in "${max_parallel_sessions_range[@]}"; do
-        python3 SchedulingInst.py ${yearRodef} ${max_par} 1 1
+        python3 SchedulingInst.py ${yearRodef} ${max_par} 0 0
     done
 done
