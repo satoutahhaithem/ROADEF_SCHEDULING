@@ -1,9 +1,8 @@
 for yearRodef in {2024..2021}; do
-    source myenv/bin/activate
     # Define the session ranges for each year
     max_parallel_sessions_range_2024=($(seq 16 -1 9))
-    max_parallel_sessions_range_2023=($(seq 18 -1 12))
-    max_parallel_sessions_range_2022=($(seq 16 -1 11))
+    max_parallel_sessions_range_2023=($(seq 18 -1 11))
+    max_parallel_sessions_range_2022=($(seq 16 -1 10))
     max_parallel_sessions_range_2021=($(seq 10 -1 4))
 
     # Select the appropriate array based on the year
@@ -27,6 +26,6 @@ for yearRodef in {2024..2021}; do
 
     # Iterate over the selected array
     for max_par in "${max_parallel_sessions_range[@]}"; do
-        python3 SchedulingInst.py ${yearRodef} ${max_par} 0 0
+        python3 SchedulingInst.py ${yearRodef} ${max_par} 1 1
     done
 done

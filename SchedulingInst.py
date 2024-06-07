@@ -41,13 +41,13 @@ if data_set_choice == "2024":
     else:
         from Data.ROADEF2021 import conference_sessions, slots, papers_range, working_groups, np, npMax, session_groups
 elif data_set_choice == "2023":
-    if (max_parallel_sessions < 12 ): 
+    if (max_parallel_sessions < 11 ): 
         print ("max_parallel_sessions must be more than 12")
         sys.exit(1) 
     else:
         from Data.ROADEF2022 import conference_sessions, slots, papers_range, working_groups, np, npMax, session_groups 
 elif data_set_choice == "2022":
-    if (max_parallel_sessions < 11 ): 
+    if (max_parallel_sessions < 10 ): 
         print ("max_parallel_sessions must be more than 11")
         sys.exit(1) 
     else:
@@ -285,11 +285,11 @@ if (data_set_choice=="2024"):
 
 # constraints.to_file("instance/"+data_set_choice+"/"+str(max_parallel_sessions)+"_session_file.wcnf")
 if (isWithZ==0 and encType==0):
-    constraints.to_file("./Benchmark/BasicModel/ROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions))
+    constraints.to_file("./Benchmark/BasicModel/ROADEF_"+data_set_choice+"_"+str(max_parallel_sessions))
 elif (isWithZ!=0 and encType==0):
-    constraints.to_file("./Benchmark/EnhancedModel/ROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions))
+    constraints.to_file("./Benchmark/EnhancedModel/ROADEF_"+data_set_choice+"_"+str(max_parallel_sessions))
 else:
-    constraints.to_file("./Benchmark/EnhancedModelEnc/ROADEF_"+data_set_choice+"_n_"+str(max_parallel_sessions))
+    constraints.to_file("./Benchmark/EnhancedModelEnc/ROADEF_"+data_set_choice+"_"+str(max_parallel_sessions))
 
 
 
